@@ -1,0 +1,91 @@
+# ============================================
+# Test-NetworkConnectivity.ps1
+# Purpose: Check basic network connectivity
+# Author: Cristina Hillman
+# ============================================
+
+# Display the computer name
+Write-Host "===================================="
+Write-Host "      NETWORK HEALTH CHECK"
+Write-Host "===================================="
+Write-Host "Computer: $env:COMPUTERNAME"
+Write-Host ""
+
+# Get network configuration that has a default gateway
+$Network = Get-NetIPConfiguration |
+    Where-Object { $_.IPv4DefaultGateway -ne $null }
+
+# Check if an active network connection was found
+if (-not $Network) {
+    Write-Host "Network: FAIL - No active connection found."
+    exit
+}
+
+# Get the IP address
+$IPAddress = $Network.IPv4Address.IPAddress
+
+# Get the default gateway
+$Gateway = $Network.IPv4DefaultGateway.NextHop
+
+Write-Host "IP Address: $IPAddress"
+Write-Host "Gateway:    $Gateway"
+Write-Host ""
+
+# --------------------------------------------
+# Test 1: Default Gateway
+# --------------------------------------------
+
+Write-Host "Testing default gateway..."
+
+$GatewayTest = Test-Connection `
+    -ComputerName $Gateway `
+    -Count 2 `
+    -Quiet
+
+if ($GatewayTest) {
+    Write-Host "Gateway: PASS"
+}
+else {
+    Write-Host "Gateway: FAIL"
+}
+
+# --------------------------------------------
+# Test 2: Internet Connectivity
+# --------------------------------------------
+
+Write-Host "Testing internet connectivity..."
+
+$InternetTest = Test-Connection `
+    -ComputerName "8.8.8.8" `
+    -Count 2 `
+    -Quiet
+
+if ($InternetTest) {
+    Write-Host "Internet: PASS"
+}
+else {
+    Write-Host "Internet: FAIL"
+}
+
+# --------------------------------------------
+# Test 3: DNS
+# --------------------------------------------
+
+Write-Host "Testing DNS..."
+
+try {
+    Resolve-DnsName "google.com" -ErrorAction Stop | Out-Null
+    Write-Host "DNS: PASS"
+}
+catch {
+    Write-Host "DNS: FAIL"
+}
+
+# --------------------------------------------
+# Final message
+# --------------------------------------------
+
+Write-Host ""
+Write-Host "===================================="
+Write-Host "       NETWORK CHECK COMPLETE"
+Write-Host "===================================="
